@@ -11,18 +11,24 @@ from src.azure_chat import model
 
 
 class BookCar(BaseModel):
-    """Information necessary to request a car booking."""
+    """Information necessary to request a car booking.
+    Please stick to these fields when asking questions to the user."""
 
-    pick_up_date: Optional[str] = Field(default=None, description="The date of car pick up")
-    drop_off_date: Optional[str] = Field(default=None, description="The date of car drop off")
     pick_up_location: Optional[str] = Field(default=None, description="The pick up location for the car rental")
+    pick_up_date: Optional[str] = Field(default=None, description="Pick up date")
+    pick_up_time: Optional[str] = Field(default=None, description="Pick up time")
     drop_off_location: Optional[str] = Field(default=None, description="The drop off location for the car rental")
-    car_type: Optional[str] = Field(default=None, description="The type of car they want to rent")
+    drop_off_date: Optional[str] = Field(default=None, description="Drop off date")
+    drop_off_time: Optional[str] = Field(default=None, description="Drop off time")
+    car_type: Optional[str] = Field(default=None, description="The type of car the user wants to rent")
 
 
 @tool
-def book_car(user_input: str) -> dict:
-    """Tool to collect necessary information required to make a car booking"""
+def book_car(user_input: str) -> BookCar:
+    """This tool helps with extracting from the text the necessary information to book a car.
+    This tool will also help you format the information collected from the user.
+    Please make sure to run it every time the user provides new information together with context from the
+    message history. This will serve as a summary of all information collected so far."""
     current_date = datetime.datetime.now().date().strftime('%d/%m/%Y')
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -44,7 +50,7 @@ def book_car(user_input: str) -> dict:
     runnable = prompt | model.with_structured_output(schema=BookCar)
     llm_output = runnable.invoke({"text": user_input}).dict()
     llm_output = date_parser(llm_output)
-    return llm_output
+    return BookCar.model_validate(llm_output)
 
 
 def date_parser(llm_output: dict) -> datetime:
