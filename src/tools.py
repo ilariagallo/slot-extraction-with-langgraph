@@ -22,7 +22,7 @@ class BookCar(BaseModel):
 
 @tool
 def book_car(user_input: str) -> dict:
-    """Returns the information required to book a car in the form of a dictionary."""
+    """Tool to collect necessary information required to make a car booking"""
     current_date = datetime.datetime.now().date().strftime('%d/%m/%Y')
     prompt = ChatPromptTemplate.from_messages(
         [
