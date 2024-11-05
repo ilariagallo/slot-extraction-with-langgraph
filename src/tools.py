@@ -7,6 +7,7 @@ from langchain_core.tools import tool
 from typing import Optional
 from pydantic import Field, BaseModel
 
+from src.agent import AgentState
 from src.azure_chat import model
 
 
@@ -24,28 +25,31 @@ class BookCar(BaseModel):
 
 
 @tool
-def book_car(user_input: str) -> BookCar:
+def book_car(user_input: str, state: AgentState) -> BookCar:
     """This tool helps with extracting from the text the necessary information to book a car.
     This tool will also help you format the information collected from the user.
     Please make sure to run it every time the user provides new information together with context from the
     message history. This will serve as a summary of all information collected so far."""
+
     current_date = datetime.datetime.now().date().strftime('%d/%m/%Y')
     prompt = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
                 "You are an expert extraction algorithm. "
-                "Only extract relevant information from the text. "
+                "Extract relevant information from the text and message history. "
                 "If you do not know the value of an attribute asked to extract, "
                 "return null for the attribute's value."
-                f"When resolving the dates keep in mind today is {current_date} (day/month/year)",
+                f"When resolving the dates keep in mind today is {current_date} (day/month/year)"
+                "Message history:"
+                "{messages}",
             ),
             # Please see the how-to about improving performance with
             # reference examples.
             # MessagesPlaceholder('examples'),
             ("human", "{text}"),
         ]
-    )
+    ).partial(messages=state.get("messages", []))
 
     runnable = prompt | model.with_structured_output(schema=BookCar)
     llm_output = runnable.invoke({"text": user_input}).dict()

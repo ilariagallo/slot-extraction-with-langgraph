@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, END
-from typing import TypedDict, Annotated
+from typing_extensions import TypedDict, Annotated
 import operator
 from langchain_core.messages import AnyMessage, SystemMessage, ToolMessage
 
