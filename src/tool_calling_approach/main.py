@@ -4,9 +4,9 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from langchain_core.messages import HumanMessage, ToolMessage
 
-from src.azure_chat import model
-from src.agent import Agent, PROMPT
-from src.tools import book_car
+from src.tool_calling_approach.azure_chat import model
+from src.tool_calling_approach.agent import Agent, PROMPT
+from src.tool_calling_approach.tools import book_car
 
 if __name__ == "__main__":
 

@@ -7,8 +7,8 @@ from langchain_core.tools import tool
 from typing import Optional
 from pydantic import Field, BaseModel
 
-from src.agent import AgentState
-from src.azure_chat import model
+from src.tool_calling_approach.agent import AgentState
+from src.tool_calling_approach.azure_chat import model
 
 
 class BookCar(BaseModel):
