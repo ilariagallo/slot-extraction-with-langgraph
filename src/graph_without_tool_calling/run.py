@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from src.graph_without_tool_calling.azure_chat import model
 from src.graph_without_tool_calling.agent import Agent
-from src.graph_without_tool_calling.tools import BookCar
+from src.graph_without_tool_calling.tools import BookCar, BOOK_CAR_OPTIONAL_SLOTS
 
 if __name__ == "__main__":
 
@@ -16,11 +16,13 @@ if __name__ == "__main__":
     memory = SqliteSaver(conn)
 
     slots = BookCar().dict()
+    optional_slots_keys = BOOK_CAR_OPTIONAL_SLOTS
+
     while True:
         user_input = input("User input:\n")
 
         # Bot
-        abot = Agent(model, checkpointer=memory, slots=slots)
+        abot = Agent(model, checkpointer=memory, slots=slots, optional_slots_keys=optional_slots_keys)
         messages = [HumanMessage(content=user_input)]
         thread = {"configurable": {"thread_id": "1"}}
         result = abot.graph.invoke({"messages": messages}, thread)

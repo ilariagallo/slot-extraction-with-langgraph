@@ -17,7 +17,7 @@ class AgentState(TypedDict):
 
 class Agent:
 
-    def __init__(self, model, slots, checkpointer):
+    def __init__(self, model, slots, optional_slots_keys, checkpointer):
         graph = StateGraph(AgentState)
         graph.add_node("init_state", self.init_state)
         graph.add_node("slot_collection", self.book_car)
@@ -34,6 +34,7 @@ class Agent:
         self.graph = graph.compile(checkpointer=checkpointer)
         self.model = model
         self.slots = slots
+        self.optional_slots_keys = optional_slots_keys
 
     def init_state(self, state: AgentState):
         state['slots'] = self.slots
@@ -108,6 +109,8 @@ class Agent:
 
     def conversational_node(self, state: AgentState):
         user_input = state['messages'][-1].content
+
+        mandatory_slots = {k: v for k, v in state.get("slots", {}).items() if k not in self.optional_slots_keys}
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -129,7 +132,7 @@ class Agent:
                 # MessagesPlaceholder('examples'),
                 ("human", "{text}"),
             ]
-        ).partial(messages=state.get("messages", []), slots=state.get("slots", {}))
+        ).partial(messages=state.get("messages", []), slots=mandatory_slots)
 
         chain = prompt | self.model
         ai_message = chain.invoke({'text': user_input})
