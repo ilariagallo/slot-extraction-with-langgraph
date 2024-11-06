@@ -74,7 +74,7 @@ class Agent:
     def date_parser(llm_output: dict) -> datetime:
         for key, value in llm_output.items():
             if 'date' in key and value:
-                parsed_date = dateparser.parse(value)
+                parsed_date = dateparser.parse(value, settings={'PREFER_DATES_FROM': 'future'})
                 llm_output[key] = parsed_date.strftime('%d/%m/%Y') if parsed_date else value
 
         return llm_output
