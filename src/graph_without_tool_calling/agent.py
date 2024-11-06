@@ -17,7 +17,7 @@ class AgentState(TypedDict):
 
 class Agent:
 
-    def __init__(self, model, checkpointer):
+    def __init__(self, model, slots, checkpointer):
         graph = StateGraph(AgentState)
         graph.add_node("init_state", self.init_state)
         graph.add_node("slot_collection", self.book_car)
@@ -33,9 +33,10 @@ class Agent:
         )
         self.graph = graph.compile(checkpointer=checkpointer)
         self.model = model
+        self.slots = slots
 
     def init_state(self, state: AgentState):
-        state['slots'] = BookCar().dict()
+        state['slots'] = self.slots
         return state
 
     def book_car(self, state: AgentState):
@@ -63,8 +64,10 @@ class Agent:
         runnable = prompt | self.model.with_structured_output(schema=BookCar)
         llm_output = runnable.invoke({"text": user_input}).dict()
         parsed_output = self.date_parser(llm_output)
-        output = self.validate_dates(parsed_output)
-        return {'messages': state['messages'], 'slots': output}
+        output = self.validate_pick_up_drop_off_dates(parsed_output)
+
+        state['slots'].update({key: value for key, value in output.items() if value})
+        return {'messages': state['messages'], 'slots': state['slots']}
 
     @staticmethod
     def date_parser(llm_output: dict) -> datetime:
@@ -76,19 +79,25 @@ class Agent:
         return llm_output
 
     @staticmethod
-    def validate_dates(parsed_output: dict):
-        pick_up_date = parsed_output['pick_up_date']
-        drop_off_date = parsed_output['drop_off_date']
+    def validate_pick_up_drop_off_dates(parsed_output: dict):
+        try:
+            # Try to parse the date in order to validate them
+            pick_up_date = parsed_output['pick_up_date']
+            drop_off_date = parsed_output['drop_off_date']
 
-        if pick_up_date and drop_off_date:
-            pick_up_date = datetime.datetime.strptime(pick_up_date, '%d/%m/%Y')
-            drop_off_date = datetime.datetime.strptime(drop_off_date, '%d/%m/%Y')
+            if pick_up_date and drop_off_date:
+                pick_up_date = datetime.datetime.strptime(pick_up_date, '%d/%m/%Y')
+                drop_off_date = datetime.datetime.strptime(drop_off_date, '%d/%m/%Y')
 
-            if pick_up_date > drop_off_date:
-                parsed_output['pick_up_date'] = "INVALID. Reason: Pick up date after drop off date."
-                parsed_output['drop_off_date'] = "INVALID. Reason: Pick up date after drop off date."
+                if pick_up_date > drop_off_date:
+                    parsed_output['pick_up_date'] = "INVALID. Reason: Pick up date after drop off date."
+                    parsed_output['drop_off_date'] = "INVALID. Reason: Pick up date after drop off date."
 
-        return parsed_output
+            return parsed_output
+
+        except Exception:
+            # If parsing fails, validation will not be carried out and the slots will be returned as they are
+            return parsed_output
 
     def all_slots_collected(self, state: AgentState):
         slots = state['slots']
