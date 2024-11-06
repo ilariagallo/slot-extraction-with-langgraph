@@ -8,7 +8,6 @@ import operator
 from langchain_core.messages import AnyMessage
 
 from src.graph_without_tool_calling.tools import BookCar
-from src.tool_calling_approach.azure_chat import model
 
 
 class AgentState(TypedDict):
@@ -41,7 +40,6 @@ class Agent:
 
     def book_car(self, state: AgentState):
         """Extracts necessary information to book a car from the text and message history."""
-        print("Calling slot extraction:")
         user_input = state['messages'][-1].content
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -62,11 +60,11 @@ class Agent:
             ]
         ).partial(messages=state.get("messages", []))
 
-        runnable = prompt | model.with_structured_output(schema=BookCar)
+        runnable = prompt | self.model.with_structured_output(schema=BookCar)
         llm_output = runnable.invoke({"text": user_input}).dict()
-        llm_output = self.date_parser(llm_output)
-        print("SLOTS: ", llm_output)
-        return {'messages': state['messages'], 'slots': llm_output}
+        parsed_output = self.date_parser(llm_output)
+        output = self.validate_dates(parsed_output)
+        return {'messages': state['messages'], 'slots': output}
 
     @staticmethod
     def date_parser(llm_output: dict) -> datetime:
@@ -77,6 +75,21 @@ class Agent:
 
         return llm_output
 
+    @staticmethod
+    def validate_dates(parsed_output: dict):
+        pick_up_date = parsed_output['pick_up_date']
+        drop_off_date = parsed_output['drop_off_date']
+
+        if pick_up_date and drop_off_date:
+            pick_up_date = datetime.datetime.strptime(pick_up_date, '%d/%m/%Y')
+            drop_off_date = datetime.datetime.strptime(drop_off_date, '%d/%m/%Y')
+
+            if pick_up_date > drop_off_date:
+                parsed_output['pick_up_date'] = "INVALID. Reason: Pick up date after drop off date."
+                parsed_output['drop_off_date'] = "INVALID. Reason: Pick up date after drop off date."
+
+        return parsed_output
+
     def all_slots_collected(self, state: AgentState):
         slots = state['slots']
         if None in slots.values():
@@ -85,7 +98,6 @@ class Agent:
             return True
 
     def conversational_node(self, state: AgentState):
-        print("Calling conversational node:")
         user_input = state['messages'][-1].content
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -95,6 +107,7 @@ class Agent:
                     "You are helping a customer collecting the information required to proceed with their booking."
                     "You have to ask questions to the users in oder to fill in all the missing values in the Slots."
                     "Only ask questions related to the slots provided. No other question allowed."
+                    "If a slot is set to INVALID ask the user for clarification and tell them the reason why."
                     "Once all the slots are filled, ask the user to confirm the details provided and then tell them "
                     "they are being route to an agent who will help with making the booking."
                     "Message history:"
@@ -109,6 +122,6 @@ class Agent:
             ]
         ).partial(messages=state.get("messages", []), slots=state.get("slots", {}))
 
-        chain = prompt | model
+        chain = prompt | self.model
         ai_message = chain.invoke({'text': user_input})
         return {'messages': [ai_message], 'slots': state['slots']}

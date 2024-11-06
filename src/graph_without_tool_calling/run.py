@@ -24,4 +24,5 @@ if __name__ == "__main__":
         result = abot.graph.invoke({"messages": messages}, thread)
 
         # Print out the AI message
-        print(result['messages'][-1].content)
+        print("SLOTS: ", result['slots'])
+        print("AI Message:", result['messages'][-1].content)
