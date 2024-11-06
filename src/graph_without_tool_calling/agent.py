@@ -43,7 +43,6 @@ class Agent:
         """Extracts necessary information to book a car from the text and message history."""
         print("Calling slot extraction:")
         user_input = state['messages'][-1].content
-        current_date = datetime.datetime.now().date().strftime('%d/%m/%Y')
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -52,7 +51,7 @@ class Agent:
                     "Extract relevant information from the text and message history. "
                     "If you do not know the value of an attribute asked to extract, "
                     "return null for the attribute's value."
-                    f"When resolving the dates keep in mind today is {current_date} (day/month/year)"
+                    f"Don't try to resolve dates yourself. Populate the attribute's value with what the user provided."
                     "Message history:"
                     "{messages}",
                 ),
