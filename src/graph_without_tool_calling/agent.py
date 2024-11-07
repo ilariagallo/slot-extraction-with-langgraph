@@ -1,4 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import AzureChatOpenAI
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
 from typing_extensions import TypedDict, Annotated
@@ -15,7 +17,17 @@ class AgentState(TypedDict):
 
 class Agent:
 
-    def __init__(self, model, slots, optional_slots_keys, checkpointer):
+    def __init__(self, model: AzureChatOpenAI, slots: BaseModel, checkpointer: SqliteSaver,
+                 optional_slots_keys: list[str] = None):
+        """
+        Agent to help the user with a new booking request
+
+        :param model: GenAI model
+        :param slots: slots in the form of a pydantic model
+        :param checkpointer: memory of the conversation
+        :param optional_slots_keys: list of optional slot keys
+        """
+
         graph = StateGraph(AgentState)
         graph.add_node("init_state", self.init_state)
         graph.add_node("slot_collection", self.collect_slots)
@@ -31,6 +43,7 @@ class Agent:
         self.optional_slots_keys = optional_slots_keys
 
     def init_state(self, state: AgentState):
+        """Initialise the slots"""
         state['slots'] = self.slots
         return state
 
@@ -65,6 +78,8 @@ class Agent:
         return {'messages': state['messages'], 'slots': slots}
 
     def conversational_node(self, state: AgentState):
+        """Node to facilitate the conversation with the user."""
+
         user_input = state['messages'][-1].content
 
         mandatory_slots = {k: v for k, v in state.get("slots").dict().items() if k not in self.optional_slots_keys}
