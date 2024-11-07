@@ -18,19 +18,19 @@ def date_parser(llm_output: Type[Schema]) -> Schema:
     return llm_output
 
 
-def validate_pick_up_drop_off_dates(parsed_output: Type[Schema]) -> Schema:
+def validate_timeline(parsed_output: Type[Schema], start_date_key: str, end_date_key: str) -> Schema:
     try:
+        start_date = getattr(parsed_output, start_date_key)
+        end_date = getattr(parsed_output, end_date_key)
+
         # Try to parse the date in order to validate them
-        pick_up_date = parsed_output.pick_up_date
-        drop_off_date = parsed_output.drop_off_date
+        if start_date and end_date:
+            start_date = datetime.datetime.strptime(start_date, DATE_FORMAT)
+            end_date = datetime.datetime.strptime(end_date, DATE_FORMAT)
 
-        if pick_up_date and drop_off_date:
-            pick_up_date = datetime.datetime.strptime(pick_up_date, DATE_FORMAT)
-            drop_off_date = datetime.datetime.strptime(drop_off_date, DATE_FORMAT)
-
-            if pick_up_date > drop_off_date:
-                setattr(parsed_output, 'pick_up_date', "INVALID. Reason: Pick up date after drop off date.")
-                setattr(parsed_output, 'drop_off_date', "INVALID. Reason: Pick up date after drop off date.")
+            if start_date > end_date:
+                setattr(parsed_output, start_date_key, f"INVALID. Reason: Start date needs to be before the end date.")
+                setattr(parsed_output, end_date_key, f"INVALID. Reason: Start date needs to be before the end date.")
 
         return parsed_output
 

@@ -71,10 +71,12 @@ class Agent:
 
         runnable = prompt | self.model.with_structured_output(schema=self.slots.__class__)
         llm_output: BaseModel = runnable.invoke({"text": user_input})
-        parsed_output: BaseModel = self.validate_slots(slots=llm_output)
 
-        slots = state['slots'].copy(update={key: value for key, value in parsed_output.dict().items() if value})
-        return {'messages': state['messages'], 'slots': slots}
+        # Update slots with new slots collected
+        slots = state['slots'].copy(update={key: value for key, value in llm_output.dict().items() if value})
+        validated_slots = self.validate_slots(slots=slots)
+
+        return {'messages': state['messages'], 'slots': validated_slots}
 
     def conversational_node(self, state: AgentState):
         """Node to facilitate the conversation with the user."""

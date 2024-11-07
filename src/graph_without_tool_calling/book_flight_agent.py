@@ -3,7 +3,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from openai import BaseModel
 
 from src.graph_without_tool_calling.agent import Agent
-from src.graph_without_tool_calling.date_validation import date_parser, validate_pick_up_drop_off_dates
+from src.graph_without_tool_calling.date_validation import date_parser, validate_timeline
 from src.graph_without_tool_calling.models import BookFlight
 
 
@@ -17,5 +17,5 @@ class BookFlightAgent(Agent):
 
     def validate_slots(self, slots) -> BookFlight:
         parsed_output = date_parser(slots)
-        slots = parsed_output
+        slots = validate_timeline(parsed_output, 'departure_date', 'arrival_date')
         return slots
