@@ -8,7 +8,7 @@ from src.graph_without_tool_calling.models import BookFlight
 
 
 class BookFlightAgent(Agent):
-    """Agent for new car booking"""
+    """Agent for new flight booking"""
 
     optional_slots_keys = ['preferred_airline', 'miles_loyalty_number']
 
