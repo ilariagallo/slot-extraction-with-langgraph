@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -71,10 +73,9 @@ class Agent:
 
         runnable = prompt | self.model.with_structured_output(schema=self.slots.__class__)
         llm_output: BaseModel = runnable.invoke({"text": user_input})
-        parsed_output: BaseModel = date_parser(llm_output)
-        output: BaseModel = validate_pick_up_drop_off_dates(parsed_output)
+        parsed_output: BaseModel = self.validate_slots(slots=llm_output)
 
-        slots = state['slots'].copy(update={key: value for key, value in output.dict().items() if value})
+        slots = state['slots'].copy(update={key: value for key, value in parsed_output.dict().items() if value})
         return {'messages': state['messages'], 'slots': slots}
 
     def conversational_node(self, state: AgentState):
@@ -109,3 +110,7 @@ class Agent:
         chain = prompt | self.model
         ai_message = chain.invoke({'text': user_input})
         return {'messages': [ai_message], 'slots': state['slots']}
+
+    @abstractmethod
+    def validate_slots(self, slots):
+        pass

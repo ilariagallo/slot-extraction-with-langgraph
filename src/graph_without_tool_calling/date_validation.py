@@ -1,12 +1,14 @@
 import datetime
+from typing import Type
 
 import dateparser
-from openai import BaseModel
+
+from src.graph_without_tool_calling.models import Schema
 
 DATE_FORMAT = '%d/%b/%Y'
 
 
-def date_parser(llm_output: BaseModel) -> BaseModel:
+def date_parser(llm_output: Type[Schema]) -> Schema:
     for key, value in llm_output.dict().items():
         if 'date' in key and value:
             parsed_date = dateparser.parse(value, settings={'PREFER_DATES_FROM': 'future'})
@@ -16,7 +18,7 @@ def date_parser(llm_output: BaseModel) -> BaseModel:
     return llm_output
 
 
-def validate_pick_up_drop_off_dates(parsed_output: BaseModel) -> BaseModel:
+def validate_pick_up_drop_off_dates(parsed_output: Type[Schema]) -> Schema:
     try:
         # Try to parse the date in order to validate them
         pick_up_date = parsed_output.pick_up_date

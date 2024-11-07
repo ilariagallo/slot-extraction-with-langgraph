@@ -1,5 +1,7 @@
-from typing import Optional
+from typing import Optional, TypeVar
 from pydantic import Field, BaseModel
+
+Schema = TypeVar('Schema', bound=BaseModel)
 
 
 class BookCar(BaseModel):
