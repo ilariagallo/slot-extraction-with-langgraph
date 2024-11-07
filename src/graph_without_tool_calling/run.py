@@ -5,9 +5,8 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_core.messages import HumanMessage
 
 from src.graph_without_tool_calling.azure_chat import model
-from src.graph_without_tool_calling.agent import Agent
 from src.graph_without_tool_calling.book_car_agent import BookCarAgent
-from src.graph_without_tool_calling.models import BookCar, BOOK_CAR_OPTIONAL_SLOTS
+from src.graph_without_tool_calling.models import BookCar
 
 if __name__ == "__main__":
 
@@ -17,13 +16,12 @@ if __name__ == "__main__":
     memory = SqliteSaver(conn)
 
     slots = BookCar()
-    optional_slots_keys = BOOK_CAR_OPTIONAL_SLOTS
 
     while True:
         user_input = input("User input:\n")
 
         # Bot
-        abot = BookCarAgent(model, checkpointer=memory, slots=slots, optional_slots_keys=optional_slots_keys)
+        abot = BookCarAgent(model, checkpointer=memory, slots=slots)
         messages = [HumanMessage(content=user_input)]
         thread = {"configurable": {"thread_id": "1"}}
         result = abot.graph.invoke({"messages": messages}, thread)
