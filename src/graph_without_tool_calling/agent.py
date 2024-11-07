@@ -1,16 +1,16 @@
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph
+from pydantic import BaseModel
 from typing_extensions import TypedDict, Annotated
 import operator
 from langchain_core.messages import AnyMessage
 
 from src.graph_without_tool_calling.date_validation import date_parser, validate_pick_up_drop_off_dates
-from src.graph_without_tool_calling.models import BookCar
 
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
-    slots: dict
+    slots: BaseModel
 
 
 class Agent:
@@ -24,11 +24,7 @@ class Agent:
         graph.set_entry_point("init_state")
         graph.add_edge("init_state", "slot_collection")
         graph.add_edge("slot_collection", "conversational_node")
-        # graph.add_conditional_edges(
-        #     "slot_collection",
-        #     self.all_slots_collected,
-        #     {True: END, False: "conversational_node"}
-        # )
+
         self.graph = graph.compile(checkpointer=checkpointer)
         self.model = model
         self.slots = slots
@@ -60,25 +56,18 @@ class Agent:
             ]
         ).partial(messages=state.get("messages", []))
 
-        runnable = prompt | self.model.with_structured_output(schema=BookCar)
-        llm_output = runnable.invoke({"text": user_input}).dict()
-        parsed_output = date_parser(llm_output)
-        output = validate_pick_up_drop_off_dates(parsed_output)
+        runnable = prompt | self.model.with_structured_output(schema=self.slots.__class__)
+        llm_output: BaseModel = runnable.invoke({"text": user_input})
+        parsed_output: BaseModel = date_parser(llm_output)
+        output: BaseModel = validate_pick_up_drop_off_dates(parsed_output)
 
-        state['slots'].update({key: value for key, value in output.items() if value})
-        return {'messages': state['messages'], 'slots': state['slots']}
-
-    # def all_slots_collected(self, state: AgentState):
-    #     slots = state['slots']
-    #     if None in slots.values():
-    #         return False
-    #     else:
-    #         return True
+        slots = state['slots'].copy(update={key: value for key, value in output.dict().items() if value})
+        return {'messages': state['messages'], 'slots': slots}
 
     def conversational_node(self, state: AgentState):
         user_input = state['messages'][-1].content
 
-        mandatory_slots = {k: v for k, v in state.get("slots", {}).items() if k not in self.optional_slots_keys}
+        mandatory_slots = {k: v for k, v in state.get("slots").dict().items() if k not in self.optional_slots_keys}
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
@@ -100,7 +89,7 @@ class Agent:
                 # MessagesPlaceholder('examples'),
                 ("human", "{text}"),
             ]
-        ).partial(messages=state.get("messages", []), slots=mandatory_slots)
+        ).partial(messages=state.get("messages"), slots=mandatory_slots)
 
         chain = prompt | self.model
         ai_message = chain.invoke({'text': user_input})

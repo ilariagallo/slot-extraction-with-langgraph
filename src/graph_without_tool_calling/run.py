@@ -15,7 +15,7 @@ if __name__ == "__main__":
     conn = sqlite3.connect(db_path, check_same_thread=False)
     memory = SqliteSaver(conn)
 
-    slots = BookCar().dict()
+    slots = BookCar()
     optional_slots_keys = BOOK_CAR_OPTIONAL_SLOTS
 
     while True:
