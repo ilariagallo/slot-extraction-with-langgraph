@@ -1,13 +1,11 @@
-import datetime
-
-import dateparser
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, END
 from typing_extensions import TypedDict, Annotated
 import operator
 from langchain_core.messages import AnyMessage
 
-from src.graph_without_tool_calling.tools import BookCar
+from src.graph_without_tool_calling.date_validation import date_parser, validate_pick_up_drop_off_dates
+from src.graph_without_tool_calling.models import BookCar
 
 
 class AgentState(TypedDict):
@@ -20,17 +18,17 @@ class Agent:
     def __init__(self, model, slots, optional_slots_keys, checkpointer):
         graph = StateGraph(AgentState)
         graph.add_node("init_state", self.init_state)
-        graph.add_node("slot_collection", self.book_car)
+        graph.add_node("slot_collection", self.collect_slots)
         graph.add_node("conversational_node", self.conversational_node)
 
         graph.set_entry_point("init_state")
         graph.add_edge("init_state", "slot_collection")
         graph.add_edge("slot_collection", "conversational_node")
-        graph.add_conditional_edges(
-            "slot_collection",
-            self.all_slots_collected,
-            {True: END, False: "conversational_node"}
-        )
+        # graph.add_conditional_edges(
+        #     "slot_collection",
+        #     self.all_slots_collected,
+        #     {True: END, False: "conversational_node"}
+        # )
         self.graph = graph.compile(checkpointer=checkpointer)
         self.model = model
         self.slots = slots
@@ -40,8 +38,8 @@ class Agent:
         state['slots'] = self.slots
         return state
 
-    def book_car(self, state: AgentState):
-        """Extracts necessary information to book a car from the text and message history."""
+    def collect_slots(self, state: AgentState):
+        """Extract relevant information from the text and message history."""
         user_input = state['messages'][-1].content
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -64,48 +62,18 @@ class Agent:
 
         runnable = prompt | self.model.with_structured_output(schema=BookCar)
         llm_output = runnable.invoke({"text": user_input}).dict()
-        parsed_output = self.date_parser(llm_output)
-        output = self.validate_pick_up_drop_off_dates(parsed_output)
+        parsed_output = date_parser(llm_output)
+        output = validate_pick_up_drop_off_dates(parsed_output)
 
         state['slots'].update({key: value for key, value in output.items() if value})
         return {'messages': state['messages'], 'slots': state['slots']}
 
-    @staticmethod
-    def date_parser(llm_output: dict) -> datetime:
-        for key, value in llm_output.items():
-            if 'date' in key and value:
-                parsed_date = dateparser.parse(value, settings={'PREFER_DATES_FROM': 'future'})
-                llm_output[key] = parsed_date.strftime('%d/%m/%Y') if parsed_date else value
-
-        return llm_output
-
-    @staticmethod
-    def validate_pick_up_drop_off_dates(parsed_output: dict):
-        try:
-            # Try to parse the date in order to validate them
-            pick_up_date = parsed_output['pick_up_date']
-            drop_off_date = parsed_output['drop_off_date']
-
-            if pick_up_date and drop_off_date:
-                pick_up_date = datetime.datetime.strptime(pick_up_date, '%d/%m/%Y')
-                drop_off_date = datetime.datetime.strptime(drop_off_date, '%d/%m/%Y')
-
-                if pick_up_date > drop_off_date:
-                    parsed_output['pick_up_date'] = "INVALID. Reason: Pick up date after drop off date."
-                    parsed_output['drop_off_date'] = "INVALID. Reason: Pick up date after drop off date."
-
-            return parsed_output
-
-        except Exception:
-            # If parsing fails, validation will not be carried out and the slots will be returned as they are
-            return parsed_output
-
-    def all_slots_collected(self, state: AgentState):
-        slots = state['slots']
-        if None in slots.values():
-            return False
-        else:
-            return True
+    # def all_slots_collected(self, state: AgentState):
+    #     slots = state['slots']
+    #     if None in slots.values():
+    #         return False
+    #     else:
+    #         return True
 
     def conversational_node(self, state: AgentState):
         user_input = state['messages'][-1].content

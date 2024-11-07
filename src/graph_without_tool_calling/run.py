@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from src.graph_without_tool_calling.azure_chat import model
 from src.graph_without_tool_calling.agent import Agent
-from src.graph_without_tool_calling.tools import BookCar, BOOK_CAR_OPTIONAL_SLOTS
+from src.graph_without_tool_calling.models import BookCar, BOOK_CAR_OPTIONAL_SLOTS
 
 if __name__ == "__main__":
 
