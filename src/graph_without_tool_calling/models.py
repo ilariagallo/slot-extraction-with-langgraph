@@ -17,3 +17,15 @@ class BookCar(BaseModel):
     car_type: Optional[str] = Field(default=None, description="The type of car the user wants to rent")
     preferred_vendor: Optional[str] = Field(default=None, description="Car vendor (e.g. SIXT, Avis, etc..)")
     car_loyalty_number: Optional[str] = Field(default=None, description="Car loyalty number (e.g. Avis loyalty number)")
+
+
+class BookFlight(BaseModel):
+    """Information necessary to request a flight booking.
+    Please stick to these fields when asking questions to the user."""
+
+    origin_airport: Optional[str] = Field(default=None, description="Departure airport")
+    destination_airport: Optional[str] = Field(default=None, description="Destination airport")
+    departure_date: Optional[str] = Field(default=None, description="Departure date")
+    arrival_date: Optional[str] = Field(default=None, description="Arrival date")
+    preferred_airline: Optional[str] = Field(default=None, description="Preferred airline for the flight")
+    miles_loyalty_number: Optional[str] = Field(default=None, description="Loyalty number for the airline of choice")
