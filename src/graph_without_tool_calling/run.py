@@ -11,7 +11,7 @@ from src.graph_without_tool_calling.models import BookCar, BOOK_CAR_OPTIONAL_SLO
 if __name__ == "__main__":
 
     # Add memory
-    db_path = '../checkpoints/checkpoints.db'
+    db_path = '../../checkpoints/checkpoints.db'
     conn = sqlite3.connect(db_path, check_same_thread=False)
     memory = SqliteSaver(conn)
 
