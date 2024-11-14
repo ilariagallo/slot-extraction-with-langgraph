@@ -1,15 +1,21 @@
-# Slot collection PoC with LangGraph and Structured Output
+# Slot collection with LangGraph and Structured Output
 
-This PoC aims at proving how we can leverage LangGraph and Structured Output to make slot collection robust to 
-different user inputs and make the behaviour consistent over time.
+## Problem Statement
 
-The purpose of this PoC is not only to improve on any other slot collection solutions implemented in the past,
-but also to propose a new standardised way to collect slots, which can be applied to different use cases. 
+In order to facilitate personalized travel booking, we need to collect essential information from users, including 
+their destination, travel dates, and other relevant details. This information needs to be structured as a dictionary, 
+where each piece of data is stored in designated "slots" (e.g., destination, departure_date, return_date). 
+The system must prompt users with targeted questions to gather and populate these slots effectively, ensuring that 
+each field is filled with accurate responses. Additionally, the system should validate and handle incomplete or 
+ambiguous inputs, guiding users to complete their booking information seamlessly.
+
+This project aims at proving how we can leverage LangGraph and Structured Output to implement a scalable solution 
+to collect slots, which can be applied to different use cases. 
 
 
-## Base solution
+## Technical Overview
 
-The base solution implements a **simple graph with 3 nodes**:
+This solution implements a **simple graph with 3 nodes**:
 - `init_state`: this node is responsible for setting the state, which includes the slots collected so far. The slots
 are initialised from scratch at the start of the conversation or provided by the output of the previous call to the 
 graph when the conversation is in progress. This is because we want to build upon information collected in previous 
