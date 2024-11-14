@@ -3,6 +3,7 @@ from abc import abstractmethod
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.constants import END
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
 from typing_extensions import TypedDict, Annotated
@@ -16,9 +17,9 @@ class AgentState(TypedDict):
 
 
 class Agent:
-
-    def __init__(self, model: AzureChatOpenAI, slots: BaseModel, checkpointer: SqliteSaver,
-                 optional_slots_keys: list[str] = None):
+    def __init__(
+        self, model: AzureChatOpenAI, slots: BaseModel, checkpointer: SqliteSaver, optional_slots_keys: list[str] = None
+    ):
         """
         Agent to help the user with a new booking request
 
@@ -36,6 +37,7 @@ class Agent:
         graph.set_entry_point("init_state")
         graph.add_edge("init_state", "slot_collection")
         graph.add_edge("slot_collection", "conversational_node")
+        graph.add_edge("conversational_node", END)
 
         self.graph = graph.compile(checkpointer=checkpointer)
         self.model = model
@@ -44,8 +46,8 @@ class Agent:
 
     def init_state(self, state: AgentState):
         """Initialise the slots"""
-        state['slots'] = self.slots
-        return state
+        slots = self.slots
+        return {"messages": [], "slots": slots}
 
     def collect_slots(self, state: AgentState):
         """Extract relevant information from the text and message history."""
@@ -76,7 +78,7 @@ class Agent:
         slots = state['slots'].copy(update={key: value for key, value in llm_output.dict().items() if value})
         validated_slots = self.validate_slots(slots=slots)
 
-        return {'messages': state['messages'], 'slots': validated_slots}
+        return {'messages': [], 'slots': validated_slots}
 
     def conversational_node(self, state: AgentState):
         """Node to facilitate the conversation with the user."""

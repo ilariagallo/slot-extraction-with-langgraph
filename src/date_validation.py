@@ -3,17 +3,27 @@ from typing import Type
 
 import dateparser
 
-from src.graph_without_tool_calling.models import Schema
+from src.models import Schema
 
 DATE_FORMAT = '%d/%b/%Y'
 
 
 def date_parser(llm_output: Type[Schema]) -> Schema:
+    current_datetime = datetime.datetime.now()
+
     for key, value in llm_output.dict().items():
         if 'date' in key and value:
+            # Parse the date
             parsed_date = dateparser.parse(value, settings={'PREFER_DATES_FROM': 'future'})
-            date_str = parsed_date.strftime(DATE_FORMAT) if parsed_date else value
-            setattr(llm_output, key, date_str)
+
+            # Check if date is invalid or in the past
+            if not parsed_date:
+                setattr(llm_output, key, f"INVALID. Reason: Date needs clarification.")
+            elif parsed_date < current_datetime:
+                setattr(llm_output, key, f"INVALID. Reason: Date is in the past.")
+            else:
+                date_str = parsed_date.strftime(DATE_FORMAT) if parsed_date else value
+                setattr(llm_output, key, date_str)
 
     return llm_output
 

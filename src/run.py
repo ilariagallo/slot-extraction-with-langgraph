@@ -4,15 +4,14 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from langchain_core.messages import HumanMessage
 
-from src.graph_without_tool_calling.azure_chat import model
-from src.graph_without_tool_calling.book_car_agent import BookCarAgent
-from src.graph_without_tool_calling.book_flight_agent import BookFlightAgent
-from src.graph_without_tool_calling.models import BookCar, BookFlight
+from src.azure_chat import model
+from src.book_car_agent import BookCarAgent
+from src.models import BookCar
 
 if __name__ == "__main__":
 
     # Add memory
-    db_path = '../../checkpoints/checkpoints.db'
+    db_path = '../checkpoints/checkpoints.db'
     conn = sqlite3.connect(db_path, check_same_thread=False)
     memory = SqliteSaver(conn)
 
